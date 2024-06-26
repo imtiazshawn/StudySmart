@@ -30,10 +30,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,11 +43,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.studysmart.components.DeleteDialog
+import com.example.studysmart.components.SubjectListBottomSheet
 import com.example.studysmart.components.TaskCheckBox
 import com.example.studysmart.components.TaskDatePicker
+import com.example.studysmart.subjects
 import com.example.studysmart.ui.theme.Red
 import com.example.studysmart.utils.Priority
 import com.example.studysmart.utils.changeMillisToDateString
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,6 +67,9 @@ fun TaskScreen() {
     var datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = Instant.now().toEpochMilli()
     )
+    var sheetState = rememberModalBottomSheetState()
+    var isBottomSheetOpen by remember { mutableStateOf(false) }
+    var scope = rememberCoroutineScope()
 
     var taskTitleError by rememberSaveable { mutableStateOf<String?>(null) }
     taskTitleError = when {
@@ -73,8 +81,8 @@ fun TaskScreen() {
 
     DeleteDialog(
         isOpen = isDeleteSessionDialogOpen,
-        title = "Delete Session",
-        bodyText = "Are you sure? you want to delete this session? your studied hours will be reduced \n" +
+        title = "Delete Task",
+        bodyText = "Are you sure? you want to delete this task? your studied hours will be reduced \n" +
                 "by this session time. This action can't be undone",
         onDismissRequest = {isDeleteSessionDialogOpen = false},
         onConfirmButtonClick = {isDeleteSessionDialogOpen = false}
@@ -85,6 +93,18 @@ fun TaskScreen() {
         isOpen = isDatePickerDialogOpen,
         onDismissRequest = { isDatePickerDialogOpen = false },
         onConfirmButtonClick = { isDatePickerDialogOpen = false }
+    )
+
+    SubjectListBottomSheet(
+        sheetState = sheetState,
+        isOpen = isBottomSheetOpen,
+        subjects = subjects,
+        onDismissRequest = { isBottomSheetOpen = false },
+        onSubjectClicked = {
+            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                if (!sheetState.isVisible) isBottomSheetOpen = false
+            }
+        }
     )
 
     Scaffold(
@@ -183,7 +203,7 @@ fun TaskScreen() {
                     text = "English",
                     style = MaterialTheme.typography.bodySmall
                 )
-                IconButton(onClick = { /*TODO*/ }) {
+                IconButton(onClick = { isBottomSheetOpen = true }) {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Select Subject"
